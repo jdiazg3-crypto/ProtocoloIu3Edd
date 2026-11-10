@@ -1,9 +1,12 @@
 import java.util.List;
+import java.util.Random;
 
 public class Main {
 
     public static void main(String[] args) {
         demostracion();
+        System.out.println();
+        compararRendimiento();
     }
 
     private static void demostracion() {
@@ -62,5 +65,61 @@ public class Main {
 
     private static void imprimir(Empleado[] a) {
         for (Empleado e : a) System.out.println("  " + e);
+    }
+
+    private static void compararRendimiento() {
+        int[] tamanos = {100, 1_000, 10_000, 100_000, 1_000_000};
+        int corridas = 10;
+        String[] cargos = {"Analista", "Desarrollador", "Soporte", "Gerente"};
+        Random rnd = new Random(42);
+
+        System.out.println("=== COMPARACIÓN DE RENDIMIENTO (promedio de " + corridas + " corridas, peor caso: id inexistente) ===");
+        System.out.printf("%-10s | %-14s | %-14s | %-15s | %-15s%n",
+                "Tamaño", "Comp. lineal", "Comp. binaria", "Tiempo lin (ns)", "Tiempo bin (ns)");
+
+        for (int n : tamanos) {
+            Empleado[] arr = generar(n, cargos, rnd);
+            Ordenamiento.porIdentificacion(arr);
+
+            int idInexistente = -1;
+            long sumaLin = 0, sumaBin = 0;
+            long compLin = 0, compBin = 0;
+
+            // calentamiento de la JVM
+            for (int i = 0; i < 3; i++) {
+                Busqueda.linealPorId(arr, idInexistente);
+                Busqueda.binariaPorId(arr, idInexistente);
+            }
+
+            for (int i = 0; i < corridas; i++) {
+                long t0 = System.nanoTime();
+                Busqueda.linealPorId(arr, idInexistente);
+                sumaLin += System.nanoTime() - t0;
+                compLin = Busqueda.comparaciones;
+
+                t0 = System.nanoTime();
+                Busqueda.binariaPorId(arr, idInexistente);
+                sumaBin += System.nanoTime() - t0;
+                compBin = Busqueda.comparaciones;
+            }
+            System.out.printf("%-10d | %-14d | %-14d | %-15d | %-15d%n",
+                    n, compLin, compBin, sumaLin / corridas, sumaBin / corridas);
+        }
+    }
+
+    /** Genera n empleados con identificaciones únicas y desordenadas. */
+    private static Empleado[] generar(int n, String[] cargos, Random rnd) {
+        int[] ids = new int[n];
+        for (int i = 0; i < n; i++) ids[i] = i + 1;
+        for (int i = n - 1; i > 0; i--) { // Fisher-Yates
+            int j = rnd.nextInt(i + 1);
+            int tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp;
+        }
+        Empleado[] arr = new Empleado[n];
+        for (int i = 0; i < n; i++) {
+            arr[i] = new Empleado(ids[i], "Empleado" + ids[i],
+                    cargos[rnd.nextInt(cargos.length)], 2_000_000 + rnd.nextInt(6_000_000));
+        }
+        return arr;
     }
 }
